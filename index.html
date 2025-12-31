@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ZX81 Web Emulator</title>
+    <title>JS81 Emulator</title>
     <style>
         /* --- RETRO UI STYLING --- */
         :root {
@@ -13,6 +13,7 @@
             --led-off: #331111;
             --led-on: #ff3333;
             --modal-bg: #252525;
+            --text-muted: #888;
         }
 
         body {
@@ -39,22 +40,21 @@
             transition: box-shadow 0.2s;
         }
         #tv-container:focus {
-            box-shadow: 0 0 0 2px #777, 0 15px 50px rgba(0,0,0,0.8);
+            box-shadow: 0 0 0 2px #555, 0 15px 50px rgba(0,0,0,0.8);
         }
 
-        /* LOGO */
+        /* LOGO - Moved to Left */
         .brand {
             font-family: monospace;
             font-weight: bold;
-            font-size: 24px;
+            font-size: 28px;
             letter-spacing: -1px;
             margin-bottom: 10px;
-            color: #888;
-            text-align: right;
-            padding-right: 10px;
+            color: var(--accent);
+            text-align: left; /* Changed to Left */
+            padding-left: 5px;
             text-shadow: 0 1px 1px black;
         }
-        .brand span { color: var(--accent); }
 
         /* SCREEN */
         .screen-wrapper {
@@ -112,17 +112,17 @@
         }
         .status-light.on { background: var(--led-on); box-shadow: 0 0 10px var(--led-on); }
 
-        /* OVERLAYS (Help & Save) */
+        /* OVERLAYS (Common) */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 100;
+            background: rgba(0,0,0,0.9); z-index: 100;
             display: none; flex-direction: column;
             align-items: center; justify-content: center;
             backdrop-filter: blur(5px);
         }
         .overlay.visible { display: flex; animation: fadeIn 0.2s; }
 
-        /* HELP SPECIFIC */
+        /* KEYBOARD HELP */
         #help-content img {
             max-width: 90%; max-height: 80vh;
             border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5);
@@ -132,7 +132,24 @@
             background: #333; padding: 5px 15px; border-radius: 20px;
         }
 
-        /* SAVE MODAL SPECIFIC */
+        /* ABOUT PAGE (F2) */
+        .about-box {
+            background: var(--modal-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+            max-width: 600px;
+            width: 90%;
+            border-left: 4px solid var(--accent);
+            line-height: 1.6;
+        }
+        .about-box h2 { margin-top: 0; color: #fff; font-size: 24px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .about-box p { color: #ccc; font-size: 14px; margin-bottom: 15px; text-align: justify; }
+        .about-box .dedication { font-style: italic; color: #aaa; background: #1f1f1f; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .about-box .credits { font-size: 12px; color: #666; margin-top: 20px; border-top: 1px solid #444; padding-top: 10px; }
+        .about-box strong { color: #fff; }
+
+        /* SAVE MODAL */
         .modal-box {
             background: var(--modal-bg);
             padding: 25px 35px;
@@ -142,22 +159,12 @@
             min-width: 300px;
         }
         .modal-box h3 { margin: 0 0 20px 0; color: #fff; font-weight: 600; font-size: 18px; }
-        
         .filename-input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            border: 2px solid #444;
-            background: #111;
-            color: #fff;
-            font-family: "Courier New", monospace;
-            font-size: 16px;
-            margin-bottom: 20px;
-            outline: none;
-            box-sizing: border-box;
+            width: 100%; padding: 10px; border-radius: 6px; border: 2px solid #444;
+            background: #111; color: #fff; font-family: "Courier New", monospace;
+            font-size: 16px; margin-bottom: 20px; outline: none; box-sizing: border-box;
         }
         .filename-input:focus { border-color: var(--accent); }
-
         .modal-buttons { display: flex; justify-content: space-between; gap: 10px; }
         .modal-buttons .btn { flex: 1; justify-content: center; }
 
@@ -172,11 +179,36 @@
 </head>
 <body>
 
-    <!-- HELP OVERLAY -->
+    <!-- KEYBOARD HELP OVERLAY (F1) -->
     <div id="help-overlay" class="overlay">
         <div id="help-content" style="text-align: center;">
             <img src="keyboard.png" alt="ZX81 Keyboard" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/ZX81_keyboard.jpg/1024px-ZX81_keyboard.jpg'">
             <div class="overlay-hint">Press <b>F1</b> or Click to close</div>
+        </div>
+    </div>
+
+    <!-- ABOUT OVERLAY (F2) -->
+    <div id="about-overlay" class="overlay">
+        <div class="about-box">
+            <h2>JS81 Emulator</h2>
+            <p>
+                Created by <strong>Luís Simões da Cunha</strong>, 2025. Released under the MIT License.
+            </p>
+            
+            <div class="dedication">
+                <p>This project is dedicated <em>In Memoriam</em> to <strong>Dr. Carlo Delhez</strong>, the creator of <strong>Xtender</strong>, the very first ZX81 emulator I ever encountered.</p>
+                
+                <p>His contributions to the ZX81 and Timex Sinclair 1000/1500 communities lasted well into the late eighties, producing technical marvels like <strong>Coral BASIC</strong>, a language so advanced it made the Sinclair QL's SuperBASIC seem lacking.</p>
+
+                <p>I fondly remember the days of the demo version, when acquiring the full software meant converting Portuguese Escudos into Dutch Guilders, sealing them in an envelope, and waiting for the return post containing two floppy disks: one with Xtender, and the other with a library of ZX81 treasures.</p>
+
+                <p>Rest in peace, Dr. Delhez. Thank you for everything.</p>
+            </div>
+
+            <div class="credits">
+                Z80 CPU Core kindly provided under MIT license by <strong>Molly Howell</strong> (DrGoldfire).
+                <br>Press <strong>F2</strong> or Click to close.
+            </div>
         </div>
     </div>
 
@@ -194,7 +226,7 @@
 
     <!-- MAIN EMULATOR -->
     <div id="tv-container" tabindex="0">
-        <div class="brand">Sinclair <span>ZX81</span></div>
+        <div class="brand">JS81</div>
         <div class="screen-wrapper">
             <canvas id="screen" width="256" height="192"></canvas>
         </div>
@@ -213,7 +245,7 @@
     </div>
 
     <div class="footer-hint">
-        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F1</kbd> for Help.
+        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F2</kbd> for About.
     </div>
 
     <script src="Z80.js"></script>
@@ -227,7 +259,7 @@
         let animationFrameId;
 
         // --- TIMING ---
-        const CPU_SPEED = 865000; // 865kHz
+        const CPU_SPEED = 865000; 
         const INT_HZ = 50;         
         const MS_PER_INT = 1000 / INT_HZ; 
         const CYCLES_PER_MS = CPU_SPEED / 1000; 
@@ -364,6 +396,7 @@
             const data = memory.slice(0x4009, endAddr);
             const blob = new Blob([data], {type: "application/octet-stream"});
 
+            // Modern API
             if (window.showSaveFilePicker) {
                 try {
                     const handle = await window.showSaveFilePicker({
@@ -373,7 +406,7 @@
                     const writable = await handle.createWritable();
                     await writable.write(blob);
                     await writable.close();
-                } catch (err) { }
+                } catch (err) { /* User cancelled */ }
             } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = filename;
@@ -464,24 +497,31 @@
             el.classList.toggle('visible');
             if (!el.classList.contains('visible')) document.getElementById('tv-container').focus();
         }
+
+        function toggleAbout() {
+            const el = document.getElementById('about-overlay');
+            el.classList.toggle('visible');
+            if (!el.classList.contains('visible')) document.getElementById('tv-container').focus();
+        }
+
         document.getElementById('filename-input').addEventListener('keydown', (e) => {
             e.stopPropagation(); 
             if (e.key === "Enter") performSave();
             if (e.key === "Escape") closeSaveModal();
         });
         
-        // --- INPUT HANDLER FIX ---
+        // --- INPUT HANDLER ---
         const container = document.getElementById('tv-container');
         container.addEventListener('click', () => container.focus());
         
         container.addEventListener('keydown', (e) => {
-            // FIX: Prevent browser shortcuts (like Firefox '/' Quick Find or Chrome keys) 
-            // for any key mapped in the emulator or special keys.
-            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
+            // Prevent browser shortcuts for mapped keys
+            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || e.key === "F2" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
                 e.preventDefault();
             }
 
             if (e.key === "F1") { toggleHelp(); return; }
+            if (e.key === "F2") { toggleAbout(); return; }
             
             if (e.key === "Backspace") { 
                 keyState[0xFE] &= ~(1<<0); // Shift
@@ -508,7 +548,9 @@
             
             else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; keyState[p] |= (1<<b); }
         });
+        
         document.getElementById('help-overlay').addEventListener('click', toggleHelp);
+        document.getElementById('about-overlay').addEventListener('click', toggleAbout);
 
     </script>
 </body>
