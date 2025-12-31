@@ -25,10 +25,14 @@ To respect copyright laws and intellectual property rights, **JS81 does not incl
 
 1.  You must legally obtain a copy of the **8K ZX81 ROM**.
 2.  Commonly named `zx81.rom` (MD5: `7b9a528005e1979d4692a5d24c084a9e`).
-3.  Click the **LOAD ROM** button in the emulator and select the file.
+3.  Place it in the same folder as `js81.html`.
+4.  Click the **LOAD ROM** button in the emulator and select the file.
 
 ### 2. Running the Emulator
-Because the ROM is loaded via a file picker button rather than automatically via script, **JS81 works perfectly offline**. You can simply double-click `index.html` to run it directly from your hard drive, without needing a local web server (Python/Node/etc).
+Because the ROM is loaded via a file picker button rather than automatically via script, **JS81 works perfectly offline**. You can simply double-click `js81.html` to run it directly from your hard drive, without needing a local web server (Python/Node/etc).
+
+**If using a web server (Optional):**
+If you prefer to run it via Python (`python3 -m http.server`), you must navigate to `http://localhost:8000/js81.html` (since `index.html` no longer exists).
 
 ## ⌨️ Controls
 
