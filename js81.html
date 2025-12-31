@@ -51,7 +51,7 @@
             letter-spacing: -1px;
             margin-bottom: 10px;
             color: var(--accent);
-            text-align: left; /* Changed to Left */
+            text-align: left;
             padding-left: 5px;
             text-shadow: 0 1px 1px black;
         }
@@ -87,6 +87,7 @@
 
         input[type="file"] { display: none; }
 
+        /* BUTTON STYLES */
         .btn {
             background: #444; color: #eee;
             border: 1px solid #555;
@@ -97,8 +98,14 @@
         }
         .btn:hover { background: #555; border-color: #777; transform: translateY(-1px); color: #fff; }
         .btn:active { transform: translateY(1px); }
+
+        /* Danger / Stop */
         .btn-red { background: #902020; border-color: #b03030; }
         .btn-red:hover { background: #a02020; }
+
+        /* Help / Safe */
+        .btn-green { background: #2f7a2f; border-color: #3f9a3f; }
+        .btn-green:hover { background: #388e38; }
         
         .separator { width: 1px; height: 25px; background: #444; margin: 0 5px; }
 
@@ -235,13 +242,17 @@
     <!-- CONTROLS -->
     <div class="controls-bar">
         <div class="status-light" id="pwr-led" title="Power / ROM Loaded"></div>
+        
         <label class="btn" title="Load OS ROM">LOAD ROM <input type="file" id="romLoader"></label>
         <div class="separator"></div>
+        
         <label class="btn" title="Load .P File">LOAD TAPE <input type="file" id="tapeLoader" accept=".p"></label>
         <button class="btn" onclick="openSaveModal()" title="Save .P File">SAVE TAPE</button>
         <div class="separator"></div>
+        
         <button class="btn" onclick="resetEmulator()">RESET</button>
-        <button class="btn btn-red" onclick="toggleHelp()">KEY MAP (F1)</button>
+        <button class="btn btn-green" onclick="toggleHelp()">KEY MAP (F1)</button>
+        <button class="btn btn-red" onclick="exitEmulator()">EXIT</button>
     </div>
 
     <div class="footer-hint">
@@ -344,6 +355,17 @@
             requestAnimationFrame(cpuLoop);
         }
 
+        // --- EXIT FUNCTION ---
+        function exitEmulator() {
+            running = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            const ctx = document.getElementById('screen').getContext('2d');
+            ctx.fillStyle = '#111'; 
+            ctx.fillRect(0, 0, 256, 192);
+            document.getElementById('pwr-led').classList.remove('on');
+            try { window.close(); } catch (e) { console.log("Auto-close blocked."); }
+        }
+
         // --- TAPE ---
         function loadTape(buffer) {
             if (!z80) { alert("Load ROM first!"); return; }
@@ -396,7 +418,6 @@
             const data = memory.slice(0x4009, endAddr);
             const blob = new Blob([data], {type: "application/octet-stream"});
 
-            // Modern API
             if (window.showSaveFilePicker) {
                 try {
                     const handle = await window.showSaveFilePicker({
@@ -515,7 +536,6 @@
         container.addEventListener('click', () => container.focus());
         
         container.addEventListener('keydown', (e) => {
-            // Prevent browser shortcuts for mapped keys
             if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || e.key === "F2" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
                 e.preventDefault();
             }
@@ -529,7 +549,7 @@
                 return; 
             }
             
-            // Map Arrows to 5,6,7,8 (Bit Masks) - NO SHIFT MODIFICATION
+            // Map Arrows to 5,6,7,8 (Bit Masks)
             if (e.code === "ArrowLeft")  { keyState[0xF7] &= ~(1<<4); }
             else if (e.code === "ArrowDown")  { keyState[0xEF] &= ~(1<<4); }
             else if (e.code === "ArrowUp")    { keyState[0xEF] &= ~(1<<3); }
