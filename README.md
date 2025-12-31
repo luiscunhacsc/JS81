@@ -14,7 +14,6 @@
     *   **Save .P Files:** Uses the modern **File System Access API** to allow "Save As..." functionality with folder selection (falls back to standard download on older browsers).
 *   **Keyboard Mapping:**
     *   Full PC keyboard mapping to the ZX81 matrix.
-    *   Smart Arrow Key handling (maps to 5, 6, 7, 8) to support games with strict input polling (e.g., *Grimm's Fairy Trails*).
     *   Prevention of browser shortcuts (like Firefox's Quick Find) when typing.
 
 ## 🚀 Getting Started
