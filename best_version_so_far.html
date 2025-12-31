@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ZX81 Web Emulator</title>
+    <style>
+        /* --- RETRO UI STYLING --- */
+        :root {
+            --bg-color: #1a1a1a;
+            --tv-case: #0f0f0f;
+            --screen-off: #222;
+            --accent: #d02020;
+            --led-off: #331111;
+            --led-on: #ff3333;
+            --modal-bg: #252525;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #ddd;
+            font-family: "Segoe UI", "Roboto", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        /* TV CASE */
+        #tv-container {
+            background: var(--tv-case);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 0 2px #333, 0 15px 50px rgba(0,0,0,0.8);
+            position: relative;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+        #tv-container:focus {
+            box-shadow: 0 0 0 2px #777, 0 15px 50px rgba(0,0,0,0.8);
+        }
+
+        /* LOGO */
+        .brand {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 24px;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            color: #888;
+            text-align: right;
+            padding-right: 10px;
+            text-shadow: 0 1px 1px black;
+        }
+        .brand span { color: var(--accent); }
+
+        /* SCREEN */
+        .screen-wrapper {
+            position: relative;
+            border: 15px solid #000;
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--screen-off);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5); 
+        }
+
+        canvas {
+            display: block;
+            width: 640px;
+            height: 480px;
+            image-rendering: pixelated;
+        }
+
+        /* CONTROLS BAR */
+        .controls-bar {
+            margin-top: 25px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: #252525;
+            padding: 12px 25px;
+            border-radius: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        input[type="file"] { display: none; }
+
+        .btn {
+            background: #444; color: #eee;
+            border: 1px solid #555;
+            padding: 10px 18px; border-radius: 20px;
+            cursor: pointer; font-size: 13px; font-weight: 700;
+            text-transform: uppercase; transition: all 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .btn:hover { background: #555; border-color: #777; transform: translateY(-1px); color: #fff; }
+        .btn:active { transform: translateY(1px); }
+        .btn-red { background: #902020; border-color: #b03030; }
+        .btn-red:hover { background: #a02020; }
+        
+        .separator { width: 1px; height: 25px; background: #444; margin: 0 5px; }
+
+        .status-light {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--led-off);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+            transition: background 0.2s, box-shadow 0.2s;
+            margin-right: 5px;
+        }
+        .status-light.on { background: var(--led-on); box-shadow: 0 0 10px var(--led-on); }
+
+        /* OVERLAYS (Help & Save) */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .overlay.visible { display: flex; animation: fadeIn 0.2s; }
+
+        /* HELP SPECIFIC */
+        #help-content img {
+            max-width: 90%; max-height: 80vh;
+            border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        .overlay-hint {
+            color: white; margin-top: 15px; font-size: 18px;
+            background: #333; padding: 5px 15px; border-radius: 20px;
+        }
+
+        /* SAVE MODAL SPECIFIC */
+        .modal-box {
+            background: var(--modal-bg);
+            padding: 25px 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px #444;
+            text-align: center;
+            min-width: 300px;
+        }
+        .modal-box h3 { margin: 0 0 20px 0; color: #fff; font-weight: 600; font-size: 18px; }
+        
+        .filename-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 2px solid #444;
+            background: #111;
+            color: #fff;
+            font-family: "Courier New", monospace;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .filename-input:focus { border-color: var(--accent); }
+
+        .modal-buttons { display: flex; justify-content: space-between; gap: 10px; }
+        .modal-buttons .btn { flex: 1; justify-content: center; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .footer-hint { margin-top: 15px; color: #666; font-size: 0.9em; }
+        kbd {
+            background: #333; padding: 2px 6px; border-radius: 4px;
+            font-family: monospace; border-bottom: 2px solid #222; color: #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HELP OVERLAY -->
+    <div id="help-overlay" class="overlay">
+        <div id="help-content" style="text-align: center;">
+            <img src="keyboard.png" alt="ZX81 Keyboard" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/ZX81_keyboard.jpg/1024px-ZX81_keyboard.jpg'">
+            <div class="overlay-hint">Press <b>F1</b> or Click to close</div>
+        </div>
+    </div>
+
+    <!-- SAVE OVERLAY -->
+    <div id="save-overlay" class="overlay">
+        <div class="modal-box">
+            <h3>Save Program</h3>
+            <input type="text" id="filename-input" class="filename-input" placeholder="program" value="program" maxlength="20">
+            <div class="modal-buttons">
+                <button class="btn" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn btn-red" onclick="performSave()">SAVE .P</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN EMULATOR -->
+    <div id="tv-container" tabindex="0">
+        <div class="brand">Sinclair <span>ZX81</span></div>
+        <div class="screen-wrapper">
+            <canvas id="screen" width="256" height="192"></canvas>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls-bar">
+        <div class="status-light" id="pwr-led" title="Power / ROM Loaded"></div>
+        <label class="btn" title="Load OS ROM">LOAD ROM <input type="file" id="romLoader"></label>
+        <div class="separator"></div>
+        <label class="btn" title="Load .P File">LOAD TAPE <input type="file" id="tapeLoader" accept=".p"></label>
+        <button class="btn" onclick="openSaveModal()" title="Save .P File">SAVE TAPE</button>
+        <div class="separator"></div>
+        <button class="btn" onclick="resetEmulator()">RESET</button>
+        <button class="btn btn-red" onclick="toggleHelp()">KEY MAP (F1)</button>
+    </div>
+
+    <div class="footer-hint">
+        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F1</kbd> for Help.
+    </div>
+
+    <script src="Z80.js"></script>
+
+    <script>
+        // --- EMULATOR STATE ---
+        let memory = new Uint8Array(65536).fill(0xFF);
+        let romBuffer = null;
+        let z80 = null;
+        let running = false;
+        let animationFrameId;
+
+        // --- TIMING ---
+        const CPU_SPEED = 865000; // 865kHz
+        const INT_HZ = 50;         
+        const MS_PER_INT = 1000 / INT_HZ; 
+        const CYCLES_PER_MS = CPU_SPEED / 1000; 
+        
+        let lastTime = 0;
+        let interruptAccumulator = 0;
+
+        // --- KEYBOARD ---
+        const KEY_MAP = {
+            'Digit1': [0xF7, 0], 'Digit2': [0xF7, 1], 'Digit3': [0xF7, 2], 'Digit4': [0xF7, 3], 'Digit5': [0xF7, 4],
+            'KeyQ':   [0xFB, 0], 'KeyW':   [0xFB, 1], 'KeyE':   [0xFB, 2], 'KeyR':   [0xFB, 3], 'KeyT':   [0xFB, 4],
+            'KeyA':   [0xFD, 0], 'KeyS':   [0xFD, 1], 'KeyD':   [0xFD, 2], 'KeyF':   [0xFD, 3], 'KeyG':   [0xFD, 4],
+            'ShiftLeft':  [0xFE, 0], 'ShiftRight': [0xFE, 0], 
+            'KeyZ':   [0xFE, 1], 'KeyX':   [0xFE, 2], 'KeyC':   [0xFE, 3], 'KeyV':   [0xFE, 4],
+            'Digit0': [0xEF, 0], 'Digit9': [0xEF, 1], 'Digit8': [0xEF, 2], 'Digit7': [0xEF, 3], 'Digit6': [0xEF, 4],
+            'KeyP':   [0xDF, 0], 'KeyO':   [0xDF, 1], 'KeyI':   [0xDF, 2], 'KeyU':   [0xDF, 3], 'KeyY':   [0xDF, 4],
+            'Enter':  [0xBF, 0], 'KeyL':   [0xBF, 1], 'KeyK':   [0xBF, 2], 'KeyJ':   [0xBF, 3], 'KeyH':   [0xBF, 4],
+            'Space':  [0x7F, 0], 'Period': [0x7F, 1], 'KeyM':   [0x7F, 2], 'KeyN':   [0x7F, 3], 'KeyB':   [0x7F, 4]
+        };
+
+        let keyState = {
+            0xFE: 0x1F, 0xFD: 0x1F, 0xFB: 0x1F, 0xF7: 0x1F,
+            0xEF: 0x1F, 0xDF: 0x1F, 0xBF: 0x1F, 0x7F: 0x1F
+        };
+
+        // --- Z80 IO ---
+        const core = {
+            mem_read: function(addr) {
+                if (addr < 0x4000) return memory[addr & 0x1FFF]; 
+                if (addr >= 0xC000) return memory[(addr & 0x3FFF) + 0x4000];
+                return memory[addr];
+            },
+            mem_write: function(addr, val) {
+                if (addr < 0x4000) return;
+                if (addr >= 0xC000) memory[(addr & 0x3FFF) + 0x4000] = val;
+                else memory[addr] = val;
+            },
+            io_read: function(port) {
+                if ((port & 0xFF) === 0xFE) {
+                    let rowSelect = (port >> 8) & 0xFF;
+                    let data = 0x1F; 
+                    if (!(rowSelect & 0x01)) data &= keyState[0xFE];
+                    if (!(rowSelect & 0x02)) data &= keyState[0xFD];
+                    if (!(rowSelect & 0x04)) data &= keyState[0xFB];
+                    if (!(rowSelect & 0x08)) data &= keyState[0xF7];
+                    if (!(rowSelect & 0x10)) data &= keyState[0xEF];
+                    if (!(rowSelect & 0x20)) data &= keyState[0xDF];
+                    if (!(rowSelect & 0x40)) data &= keyState[0xBF];
+                    if (!(rowSelect & 0x80)) data &= keyState[0x7F];
+                    return (0x40 | data) & 0xBF; 
+                }
+                return 0xFF;
+            },
+            io_write: function(port, val) {}
+        };
+
+        // --- INIT ---
+        function initEmulator(buffer) {
+            romBuffer = buffer;
+            resetEmulator();
+            document.getElementById('pwr-led').classList.add('on');
+        }
+
+        function resetEmulator() {
+            if (!romBuffer) { alert("Please Load OS ROM (zx81.rom) first."); return; }
+            memory.fill(0xFF);
+            new Uint8Array(memory.buffer).set(new Uint8Array(romBuffer), 0);
+            for(let i=0x4000; i<0x8000; i++) memory[i] = 0; 
+            memory[0x02B5] = 0xC9; // HLE Video Patch
+
+            if (typeof Z80 !== 'function') { alert("Z80.js not found!"); return; }
+            z80 = new Z80(core);
+            z80.reset();
+            
+            lastTime = 0;
+            interruptAccumulator = 0;
+            
+            running = true;
+            document.getElementById('tv-container').focus();
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            requestAnimationFrame(cpuLoop);
+        }
+
+        // --- TAPE ---
+        function loadTape(buffer) {
+            if (!z80) { alert("Load ROM first!"); return; }
+            const data = new Uint8Array(buffer);
+            for (let i = 0; i < data.length; i++) if ((0x4009 + i) < 0x8000) memory[0x4009 + i] = data[i];
+            
+            // Tape Fix
+            const sp = 0x8000 - 4; 
+            memory[0x4000] = 0xFF; memory[0x4001] = 0x80; 
+            memory[0x4002] = sp & 0xFF; memory[0x4003] = (sp >> 8) & 0xFF; 
+            memory[0x4004] = (sp + 4) & 0xFF; memory[0x4005] = ((sp + 4) >> 8) & 0xFF;  
+            memory[0x4006] = 0x00; memory[0x4007] = 0xFE; memory[0x4008] = 0xFF; 
+            memory[sp + 0] = 0x76; memory[sp + 1] = 0x06; memory[sp + 2] = 0x00; memory[sp + 3] = 0x3E;
+
+            const state = z80.getState();
+            state.a = 0x0B; state.f = 0x00; state.b = 0x00; state.c = 0x02;
+            state.d = 0x43; state.e = 0x9B; state.h = 0x43; state.l = 0x99;
+            state.ix = 0x0281; state.iy = 0x4000; state.i = 0x1E; state.r = 0xDD;
+            state.sp = sp; state.pc = 0x0207; state.im = 1;
+            z80.setState(state);
+
+            console.log("Tape Loaded");
+            document.getElementById('tv-container').focus();
+        }
+
+        // --- SAVE UI ---
+        function openSaveModal() {
+            if (!z80) { alert("Emulator not ready."); return; }
+            const modal = document.getElementById('save-overlay');
+            const input = document.getElementById('filename-input');
+            modal.classList.add('visible');
+            input.value = "program"; input.focus(); input.select(); 
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-overlay').classList.remove('visible');
+            document.getElementById('tv-container').focus(); 
+        }
+
+        async function performSave() {
+            const input = document.getElementById('filename-input');
+            let filename = input.value.trim();
+            if (!filename) filename = "program";
+            if (!filename.toLowerCase().endsWith(".p")) filename += ".p";
+
+            const endAddr = (memory[0x4015] << 8) | memory[0x4014]; 
+            if (endAddr < 0x4009 || endAddr > 0x8000) {
+                alert("Memory invalid. Save cancelled."); closeSaveModal(); return;
+            }
+            const data = memory.slice(0x4009, endAddr);
+            const blob = new Blob([data], {type: "application/octet-stream"});
+
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{ description: 'ZX81 Tape File', accept: {'application/octet-stream': ['.p']} }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                } catch (err) { }
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            closeSaveModal();
+        }
+
+        // --- TIMING LOOP ---
+        function cpuLoop(timestamp) {
+            if (!running) return;
+            if (!lastTime) lastTime = timestamp;
+
+            let dt = timestamp - lastTime;
+            if (dt > 100) dt = 100;
+            lastTime = timestamp;
+
+            let cyclesToRun = dt * CYCLES_PER_MS;
+            let c = 0;
+            while (c < cyclesToRun) {
+                c += z80.run_instruction();
+            }
+
+            interruptAccumulator += dt;
+            while (interruptAccumulator >= MS_PER_INT) {
+                z80.interrupt(false, 0);
+                interruptAccumulator -= MS_PER_INT;
+            }
+
+            renderDisplay();
+            animationFrameId = requestAnimationFrame(cpuLoop);
+        }
+
+        const ctx = document.getElementById('screen').getContext('2d');
+        const imgData = ctx.createImageData(256, 192);
+        const buf32 = new Uint32Array(imgData.data.buffer);
+        const C_BACK = 0xFFE8E8E8; const C_INK  = 0xFF151515;
+
+        function renderDisplay() {
+            buf32.fill(C_BACK);
+            const dFile = memory[0x400C] | (memory[0x400D] << 8);
+            if (dFile < 0x4000 || dFile > 0x7FFF) { ctx.putImageData(imgData, 0, 0); return; }
+            let addr = dFile + 1;
+            for (let y = 0; y < 24; y++) {
+                for (let x = 0; x < 32; x++) {
+                    if (addr >= 0x8000) break;
+                    const code = memory[addr++];
+                    if (code === 0x76) break;
+                    drawChar(code, x, y);
+                }
+                if (memory[addr-1] !== 0x76 && memory[addr] === 0x76) addr++;
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function drawChar(code, gx, gy) {
+            const invert = (code & 0x80) !== 0;
+            const fontAddr = 0x1E00 + ((code & 0x3F) * 8);
+            for (let r = 0; r < 8; r++) {
+                let byte = memory[fontAddr + r];
+                if (invert) byte = ~byte;
+                if (!byte) continue;
+                const offset = ((gy * 8) + r) * 256 + (gx * 8);
+                for (let b = 0; b < 8; b++) {
+                    if ((byte >> (7 - b)) & 1) buf32[offset + b] = C_INK;
+                }
+            }
+        }
+
+        // --- INPUTS ---
+        document.getElementById('romLoader').addEventListener('change', e => {
+            const f = e.target.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = e => initEmulator(e.target.result);
+            r.readAsArrayBuffer(f);
+        });
+        document.getElementById('tapeLoader').addEventListener('change', e => {
+            const f = e.target.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = e => loadTape(e.target.result);
+            r.readAsArrayBuffer(f);
+            e.target.value = '';
+        });
+
+        function toggleHelp() {
+            const el = document.getElementById('help-overlay');
+            el.classList.toggle('visible');
+            if (!el.classList.contains('visible')) document.getElementById('tv-container').focus();
+        }
+        document.getElementById('filename-input').addEventListener('keydown', (e) => {
+            e.stopPropagation(); 
+            if (e.key === "Enter") performSave();
+            if (e.key === "Escape") closeSaveModal();
+        });
+        
+        // --- INPUT HANDLER FIX ---
+        const container = document.getElementById('tv-container');
+        container.addEventListener('click', () => container.focus());
+        
+        container.addEventListener('keydown', (e) => {
+            // FIX: Prevent browser shortcuts (like Firefox '/' Quick Find or Chrome keys) 
+            // for any key mapped in the emulator or special keys.
+            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (e.key === "F1") { toggleHelp(); return; }
+            
+            if (e.key === "Backspace") { 
+                keyState[0xFE] &= ~(1<<0); // Shift
+                keyState[0xEF] &= ~(1<<0); // 0
+                return; 
+            }
+            
+            // Map Arrows to 5,6,7,8 (Bit Masks) - NO SHIFT MODIFICATION
+            if (e.code === "ArrowLeft")  { keyState[0xF7] &= ~(1<<4); }
+            else if (e.code === "ArrowDown")  { keyState[0xEF] &= ~(1<<4); }
+            else if (e.code === "ArrowUp")    { keyState[0xEF] &= ~(1<<3); }
+            else if (e.code === "ArrowRight") { keyState[0xEF] &= ~(1<<2); }
+            
+            else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; keyState[p] &= ~(1<<b); }
+        });
+        
+        container.addEventListener('keyup', (e) => {
+            if (e.key === "Backspace") { keyState[0xFE] |= (1<<0); keyState[0xEF] |= (1<<0); return; }
+            
+            if (e.code === "ArrowLeft")  { keyState[0xF7] |= (1<<4); }
+            else if (e.code === "ArrowDown")  { keyState[0xEF] |= (1<<4); }
+            else if (e.code === "ArrowUp")    { keyState[0xEF] |= (1<<3); }
+            else if (e.code === "ArrowRight") { keyState[0xEF] |= (1<<2); }
+            
+            else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; keyState[p] |= (1<<b); }
+        });
+        document.getElementById('help-overlay').addEventListener('click', toggleHelp);
+
+    </script>
+</body>
+</html>
