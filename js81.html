@@ -1,44 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>JS81 Emulator</title>
-    <style>
-        /* --- RETRO UI STYLING --- */
-        :root {
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1">
+	    <title>JS81 Emulator</title>
+	    <style>
+	        /* --- RETRO UI STYLING --- */
+	        :root {
             --bg-color: #1a1a1a;
             --tv-case: #0f0f0f;
             --screen-off: #222;
             --accent: #d02020;
             --led-off: #331111;
             --led-on: #ff3333;
-            --modal-bg: #252525;
-            --text-muted: #888;
-        }
+	            --modal-bg: #252525;
+	            --text-muted: #888;
+	        }
 
-        body {
-            background-color: var(--bg-color);
-            color: #ddd;
-            font-family: "Segoe UI", "Roboto", sans-serif;
+	        * { box-sizing: border-box; }
+
+	        body {
+	            background-color: var(--bg-color);
+	            color: #ddd;
+	            font-family: "Segoe UI", "Roboto", sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            user-select: none;
-        }
+	            justify-content: center;
+	            min-height: 100vh;
+	            margin: 0;
+	            padding: 24px 16px;
+	            gap: 16px;
+	            overflow-x: hidden;
+	            user-select: none;
+	        }
 
         /* TV CASE */
-        #tv-container {
-            background: var(--tv-case);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 0 0 2px #333, 0 15px 50px rgba(0,0,0,0.8);
-            position: relative;
-            outline: none;
-            transition: box-shadow 0.2s;
-        }
+	        #tv-container {
+	            background: var(--tv-case);
+	            padding: 20px;
+	            border-radius: 15px;
+	            box-shadow: 0 0 0 2px #333, 0 15px 50px rgba(0,0,0,0.8);
+	            position: relative;
+	            max-width: 100%;
+	            outline: none;
+	            transition: box-shadow 0.2s, padding 0.2s, background 0.2s;
+	        }
         #tv-container:focus {
             box-shadow: 0 0 0 2px #555, 0 15px 50px rgba(0,0,0,0.8);
         }
@@ -57,48 +64,61 @@
         }
 
         /* SCREEN */
-        .screen-wrapper {
-            position: relative;
-            border: 15px solid #000;
-            border-radius: 4px;
-            overflow: hidden;
-            background: var(--screen-off);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5); 
-        }
+	        .screen-wrapper {
+	            position: relative;
+	            border: 15px solid #000;
+	            border-radius: 4px;
+	            overflow: hidden;
+	            margin: 0 auto;
+	            background: var(--screen-off);
+	            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+	            transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+	        }
 
         canvas {
             display: block;
-            /* Integer 2x scaling keeps the ZX81's 256x192 pixels perfectly square. */
-            width: 512px;
-            height: 384px;
+            width: 256px;
+            height: 192px;
             image-rendering: pixelated;
         }
 
         /* CONTROLS BAR */
-        .controls-bar {
-            margin-top: 25px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background: #252525;
-            padding: 12px 25px;
-            border-radius: 40px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        }
+	        .controls-bar {
+	            display: flex;
+	            flex-wrap: wrap;
+	            gap: 12px;
+	            align-items: center;
+	            justify-content: center;
+	            background: #252525;
+	            padding: 12px 25px;
+	            border-radius: 40px;
+	            max-width: min(100%, 900px);
+	            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+	        }
 
         input[type="file"] { display: none; }
 
         /* BUTTON STYLES */
-        .btn {
-            background: #444; color: #eee;
-            border: 1px solid #555;
-            padding: 10px 18px; border-radius: 20px;
-            cursor: pointer; font-size: 13px; font-weight: 700;
-            text-transform: uppercase; transition: all 0.2s;
-            display: flex; align-items: center; gap: 5px;
-        }
-        .btn:hover { background: #555; border-color: #777; transform: translateY(-1px); color: #fff; }
-        .btn:active { transform: translateY(1px); }
+	        .btn {
+	            background: #444; color: #eee;
+	            border: 1px solid #555;
+	            padding: 10px 18px; border-radius: 20px;
+	            cursor: pointer; font-size: 13px; font-weight: 700;
+	            text-transform: uppercase; transition: all 0.2s;
+	            display: flex; align-items: center; justify-content: center; gap: 5px;
+	            min-height: 42px;
+	            white-space: nowrap;
+	            touch-action: manipulation;
+	        }
+	        .btn:hover { background: #555; border-color: #777; transform: translateY(-1px); color: #fff; }
+	        .btn:active { transform: translateY(1px); }
+	        .btn:focus-visible,
+	        #fullscreen-keymap-btn:focus-visible,
+	        #tv-container:focus-visible,
+	        .filename-input:focus-visible {
+	            outline: 2px solid #f0f0f0;
+	            outline-offset: 3px;
+	        }
 
         /* Danger / Stop */
         .btn-red { background: #902020; border-color: #b03030; }
@@ -158,15 +178,16 @@
         .about-box strong { color: #fff; }
 
         /* SAVE MODAL */
-        .modal-box {
-            background: var(--modal-bg);
-            padding: 25px 35px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px #444;
-            text-align: center;
-            min-width: 300px;
-        }
-        .modal-box h3 { margin: 0 0 20px 0; color: #fff; font-weight: 600; font-size: 18px; }
+	        .modal-box {
+	            background: var(--modal-bg);
+	            padding: 25px 35px;
+	            border-radius: 12px;
+	            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px #444;
+	            text-align: center;
+	            width: min(92vw, 420px);
+	        }
+	        .modal-box h3 { margin: 0 0 20px 0; color: #fff; font-weight: 600; font-size: 18px; }
+	        .modal-copy { margin: 0 0 20px 0; color: #ccc; font-size: 14px; line-height: 1.5; }
         .filename-input {
             width: 100%; padding: 10px; border-radius: 6px; border: 2px solid #444;
             background: #111; color: #fff; font-family: "Courier New", monospace;
@@ -176,24 +197,181 @@
         .modal-buttons { display: flex; justify-content: space-between; gap: 10px; }
         .modal-buttons .btn { flex: 1; justify-content: center; }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+	        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .footer-hint { margin-top: 15px; color: #666; font-size: 0.9em; }
-        kbd {
-            background: #333; padding: 2px 6px; border-radius: 4px;
-            font-family: monospace; border-bottom: 2px solid #222; color: #ccc;
+	        .status-panel {
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            gap: 10px;
+	            flex-wrap: wrap;
+	            color: #bdbdbd;
+	            font-size: 0.95em;
+	            text-align: center;
+	        }
+	        .status-label {
+	            color: #8c8c8c;
+	            font-size: 0.78rem;
+	            font-weight: 700;
+	            letter-spacing: 0.08em;
+	            text-transform: uppercase;
+	        }
+	        .status-message {
+	            padding: 8px 14px;
+	            border-radius: 999px;
+	            background: rgba(255,255,255,0.05);
+	            border: 1px solid rgba(255,255,255,0.08);
+	            color: #dadada;
+	        }
+	        .status-message[data-tone="success"] { color: #d4ffd4; }
+	        .status-message[data-tone="warn"] { color: #ffe29a; }
+	        .status-message[data-tone="error"] { color: #ffb3b3; }
+
+	        .footer-hint {
+	            color: #666;
+	            font-size: 0.9em;
+	            text-align: center;
+	            max-width: min(100%, 760px);
+	        }
+	        kbd {
+	            background: #333; padding: 2px 6px; border-radius: 4px;
+	            font-family: monospace; border-bottom: 2px solid #222; color: #ccc;
+	        }
+
+	        #help-content {
+	            text-align: center;
+	            padding: 24px;
+	        }
+
+        #fullscreen-hud {
+            position: fixed;
+            inset: 0;
+            display: none;
+            pointer-events: none;
+            z-index: 60;
         }
-    </style>
+        body.screen-mode-fullscreen #fullscreen-hud { display: block; }
+        .fullscreen-banner {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            background: rgba(0,0,0,0.78);
+            border: 1px solid rgba(255,255,255,0.16);
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        #fullscreen-keymap-btn {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            padding: 0;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.72);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            cursor: pointer;
+            pointer-events: auto;
+            overflow: hidden;
+        }
+        #fullscreen-keymap-btn img {
+            display: block;
+            max-width: min(38vw, 400px);
+            max-height: min(18vh, 110px);
+            opacity: 0.92;
+        }
+
+	        body.screen-mode-fullscreen {
+	            background: #000;
+	            padding: 0;
+	            gap: 0;
+	            overflow: hidden;
+	        }
+        body.screen-mode-fullscreen #tv-container {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        body.screen-mode-fullscreen #tv-container:focus { box-shadow: none; }
+	        body.screen-mode-fullscreen .brand,
+	        body.screen-mode-fullscreen .controls-bar,
+	        body.screen-mode-fullscreen .status-panel,
+	        body.screen-mode-fullscreen .footer-hint {
+	            display: none;
+	        }
+	        body.screen-mode-fullscreen .screen-wrapper {
+	            border: 0;
+            border-radius: 0;
+	            box-shadow: none;
+	            background: transparent;
+	        }
+
+	        @media (max-width: 720px) {
+	            body {
+	                padding: 16px 10px;
+	                gap: 12px;
+	            }
+	            #tv-container {
+	                width: 100%;
+	                padding: 14px;
+	            }
+	            .brand {
+	                text-align: center;
+	                padding-left: 0;
+	            }
+	            .screen-wrapper {
+	                border-width: 10px;
+	            }
+	            .controls-bar {
+	                width: min(100%, 560px);
+	                padding: 12px;
+	                border-radius: 24px;
+	            }
+	            .btn {
+	                flex: 1 1 145px;
+	            }
+	            .separator {
+	                display: none;
+	            }
+	            .fullscreen-banner {
+	                width: calc(100vw - 24px);
+	                text-align: center;
+	                white-space: normal;
+	            }
+	            #fullscreen-keymap-btn {
+	                right: 12px;
+	                bottom: 12px;
+	            }
+	            #fullscreen-keymap-btn img {
+	                max-width: min(52vw, 260px);
+	                max-height: min(15vh, 92px);
+	            }
+	        }
+
+	        @media (prefers-reduced-motion: reduce) {
+	            *,
+	            *::before,
+	            *::after {
+	                animation: none !important;
+	                transition: none !important;
+	                scroll-behavior: auto !important;
+	            }
+	        }
+	    </style>
 </head>
 <body>
 
-    <!-- KEYBOARD HELP OVERLAY (F1) -->
-    <div id="help-overlay" class="overlay">
-        <div id="help-content" style="text-align: center;">
-            <img src="keyboard.png" alt="ZX81 Keyboard" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/ZX81_keyboard.jpg/1024px-ZX81_keyboard.jpg'">
-            <div class="overlay-hint">Press <b>F1</b> or Click to close</div>
-        </div>
-    </div>
+	    <!-- KEYBOARD HELP OVERLAY (F1) -->
+	    <div id="help-overlay" class="overlay">
+	        <div id="help-content">
+	            <img src="keyboard.png" alt="ZX81 Keyboard" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/ZX81_keyboard.jpg/1024px-ZX81_keyboard.jpg'">
+	            <div class="overlay-hint">Press <b>F1</b>, <b>Escape</b>, or click outside to close</div>
+	        </div>
+	    </div>
 
     <!-- ABOUT OVERLAY (F2) -->
     <div id="about-overlay" class="overlay">
@@ -213,12 +391,12 @@
                 <p>Rest in peace, Dr. Delhez. Thank you for everything.</p>
             </div>
 
-            <div class="credits">
-                Z80 CPU Core kindly provided under MIT license by <strong>Molly Howell</strong> (DrGoldfire).
-                <br>Press <strong>F2</strong> or Click to close.
-            </div>
-        </div>
-    </div>
+	            <div class="credits">
+	                Z80 CPU Core kindly provided under MIT license by <strong>Molly Howell</strong> (DrGoldfire).
+	                <br>Press <strong>F2</strong>, <strong>Escape</strong>, or click outside to close.
+	            </div>
+	        </div>
+	    </div>
 
     <!-- SAVE OVERLAY -->
     <div id="save-overlay" class="overlay">
@@ -232,6 +410,25 @@
         </div>
     </div>
 
+    <!-- ROM OVERLAY -->
+    <div id="rom-overlay" class="overlay">
+        <div class="modal-box">
+            <h3>ROM Not Loaded</h3>
+            <p class="modal-copy">JS81 now tries to load <code>zx81.rom</code> automatically on startup. If your browser blocks access to the local file, select it manually here.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-green" id="select-rom-btn" type="button">SELECT ROM</button>
+            </div>
+        </div>
+    </div>
+
+	    <!-- FULLSCREEN HUD -->
+	    <div id="fullscreen-hud" aria-hidden="true">
+	        <div class="fullscreen-banner">Press <b>F3</b> to return to <b>x1</b>. Press <b>F1</b> for the full keyboard helper.</div>
+	        <button id="fullscreen-keymap-btn" type="button" title="Keyboard helper (F1)">
+	            <img id="fullscreen-keymap-image" src="keyboard.png" alt="ZX81 Keyboard Helper" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/ZX81_keyboard.jpg/1024px-ZX81_keyboard.jpg'">
+	        </button>
+	    </div>
+
     <!-- MAIN EMULATOR -->
     <div id="tv-container" tabindex="0">
         <div class="brand">JS81</div>
@@ -241,10 +438,11 @@
     </div>
 
     <!-- CONTROLS -->
-    <div class="controls-bar">
-        <div class="status-light" id="pwr-led" title="Power / ROM Loaded"></div>
-        
-        <label class="btn" title="Load OS ROM">LOAD ROM <input type="file" id="romLoader"></label>
+	    <div class="controls-bar">
+	        <div class="status-light" id="pwr-led" title="Power / ROM Loaded"></div>
+
+        <button class="btn" id="screen-mode-btn" type="button" title="Cycle screen size (F3)">SCREEN x1 (F3)</button>
+        <input type="file" id="romLoader" accept=".rom">
         <div class="separator"></div>
         
         <label class="btn" title="Load .P File">LOAD TAPE <input type="file" id="tapeLoader" accept=".p"></label>
@@ -252,13 +450,18 @@
         <div class="separator"></div>
         
         <button class="btn" onclick="resetEmulator()">RESET</button>
-        <button class="btn btn-green" onclick="toggleHelp()">KEY MAP (F1)</button>
-        <button class="btn btn-red" onclick="exitEmulator()">EXIT</button>
-    </div>
+	        <button class="btn btn-green" onclick="toggleHelp()">KEY MAP (F1)</button>
+	        <button class="btn btn-red" onclick="exitEmulator()">EXIT</button>
+	    </div>
 
-    <div class="footer-hint">
-        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F2</kbd> for About.
-    </div>
+	    <div class="status-panel" aria-live="polite" aria-atomic="true">
+	        <span class="status-label">Status</span>
+	        <span class="status-message" id="status-message" data-tone="info">Looking for zx81.rom...</span>
+	    </div>
+
+	    <div class="footer-hint">
+	        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F1</kbd> key map. <kbd>F2</kbd> about. <kbd>F3</kbd> screen size.
+	    </div>
 
     <script src="Z80.js"></script>
 
@@ -269,6 +472,13 @@
         let z80 = null;
         let running = false;
         let animationFrameId;
+        const ROM_FILENAME = 'zx81.rom';
+        let localRomBuffer = null;
+        const SCREEN_WIDTH = 256;
+        const SCREEN_HEIGHT = 192;
+        const SCREEN_MODES = ['x1', 'x2', 'full'];
+        let screenModeIndex = 0;
+        let screenMode = SCREEN_MODES[screenModeIndex];
 
         // --- TIMING ---
         const CPU_SPEED = 865000; 
@@ -278,6 +488,27 @@
         
         let lastTime = 0;
         let interruptAccumulator = 0;
+
+	        const container = document.getElementById('tv-container');
+	        const screenCanvas = document.getElementById('screen');
+	        const helpOverlay = document.getElementById('help-overlay');
+	        const aboutOverlay = document.getElementById('about-overlay');
+	        const saveOverlay = document.getElementById('save-overlay');
+	        const romOverlay = document.getElementById('rom-overlay');
+	        const romLoader = document.getElementById('romLoader');
+	        const selectRomBtn = document.getElementById('select-rom-btn');
+	        const screenModeBtn = document.getElementById('screen-mode-btn');
+	        const fullscreenKeymapBtn = document.getElementById('fullscreen-keymap-btn');
+	        const statusMessageEl = document.getElementById('status-message');
+
+	        function setStatus(message, tone = 'info') {
+	            statusMessageEl.textContent = message;
+	            statusMessageEl.dataset.tone = tone;
+	        }
+
+	        function isOverlayVisible(el) {
+	            return el.classList.contains('visible');
+	        }
 
         // --- KEYBOARD ---
         const KEY_MAP = {
@@ -363,23 +594,129 @@
         };
 
         // --- INIT ---
-        function initEmulator(buffer) {
-            romBuffer = buffer;
-            resetEmulator();
-            document.getElementById('pwr-led').classList.add('on');
+	        function initEmulator(buffer, sourceMessage = 'ROM loaded from file.') {
+	            romBuffer = buffer;
+	            hideRomOverlay();
+	            resetEmulator(false);
+	            document.getElementById('pwr-led').classList.add('on');
+	            setStatus(`${sourceMessage} Emulator ready.`, 'success');
+	        }
+
+	        function showRomOverlay() {
+	            romOverlay.classList.add('visible');
+	            selectRomBtn.focus();
+	            setStatus('Automatic ROM loading was blocked. Select zx81.rom to continue.', 'warn');
+	        }
+
+	        function hideRomOverlay() {
+	            romOverlay.classList.remove('visible');
         }
 
-        function resetEmulator() {
-            if (!romBuffer) { alert("Please Load OS ROM (zx81.rom) first."); return; }
-            memory.fill(0xFF);
-            new Uint8Array(memory.buffer).set(new Uint8Array(romBuffer), 0);
-            for(let i=0x4000; i<0x8000; i++) memory[i] = 0; 
-            memory[0x02B5] = 0xC9; // HLE Video Patch
+        function openRomPicker() {
+            romLoader.click();
+        }
 
-            if (typeof Z80 !== 'function') { alert("Z80.js not found!"); return; }
-            z80 = new Z80(core);
-            z80.reset();
-            updateKeyboardSystemVars();
+	        function updateScreenModeButton() {
+	            const label = screenMode === 'full' ? 'SCREEN FULL (F3)' : `SCREEN ${screenMode} (F3)`;
+	            screenModeBtn.textContent = label;
+	            screenModeBtn.title = `Cycle screen size. Current mode: ${screenMode}.`;
+	        }
+
+        function setCanvasScale(scale) {
+            screenCanvas.style.width = `${SCREEN_WIDTH * scale}px`;
+            screenCanvas.style.height = `${SCREEN_HEIGHT * scale}px`;
+        }
+
+        function getFullscreenScale() {
+            return Math.max(1, Math.floor(Math.min(window.innerWidth / SCREEN_WIDTH, window.innerHeight / SCREEN_HEIGHT)));
+        }
+
+        function applyScreenMode() {
+            const fullscreen = screenMode === 'full';
+            document.body.classList.toggle('screen-mode-fullscreen', fullscreen);
+            setCanvasScale(fullscreen ? getFullscreenScale() : (screenMode === 'x2' ? 2 : 1));
+            updateScreenModeButton();
+        }
+
+        async function enterBrowserFullscreen() {
+            if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (err) { /* Browser fullscreen is optional. */ }
+        }
+
+        async function exitBrowserFullscreen() {
+            if (!document.fullscreenElement || !document.exitFullscreen) return;
+            try {
+                await document.exitFullscreen();
+            } catch (err) { /* Ignore browsers that refuse to exit programmatically. */ }
+        }
+
+	        async function setScreenMode(mode) {
+	            if (!SCREEN_MODES.includes(mode)) return;
+
+            screenMode = mode;
+            screenModeIndex = SCREEN_MODES.indexOf(mode);
+            applyScreenMode();
+
+            if (mode === 'full') {
+                await enterBrowserFullscreen();
+                if (screenMode === 'full') applyScreenMode();
+            } else {
+                await exitBrowserFullscreen();
+	            }
+
+	            container.focus();
+	            setStatus(`Screen mode: ${mode === 'full' ? 'fullscreen' : mode}.`, 'info');
+	        }
+
+        async function cycleScreenMode() {
+            const nextIndex = (screenModeIndex + 1) % SCREEN_MODES.length;
+            await setScreenMode(SCREEN_MODES[nextIndex]);
+        }
+
+        async function preloadLocalRom() {
+            if (localRomBuffer) return localRomBuffer;
+            try {
+                const response = await fetch(new URL(ROM_FILENAME, window.location.href), { cache: 'no-store' });
+                if (!response.ok) return null;
+
+                localRomBuffer = await response.arrayBuffer();
+                return localRomBuffer;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        const localRomPromise = preloadLocalRom();
+
+	        async function bootEmulator() {
+	            setStatus('Looking for zx81.rom...', 'info');
+	            const buffer = localRomBuffer || await localRomPromise;
+	            if (buffer) {
+	                initEmulator(buffer.slice(0), 'ROM auto-loaded.');
+	                return;
+	            }
+	            showRomOverlay();
+	        }
+
+	        function resetEmulator(notify = true) {
+	            if (!romBuffer) {
+	                showRomOverlay();
+	                return;
+	            }
+	            memory.fill(0xFF);
+	            new Uint8Array(memory.buffer).set(new Uint8Array(romBuffer), 0);
+	            for(let i=0x4000; i<0x8000; i++) memory[i] = 0; 
+	            memory[0x02B5] = 0xC9; // HLE Video Patch
+
+	            if (typeof Z80 !== 'function') {
+	                setStatus('Z80.js not found. Emulator cannot start.', 'error');
+	                return;
+	            }
+	            z80 = new Z80(core);
+	            z80.reset();
+	            updateKeyboardSystemVars();
             
             lastTime = 0;
             interruptAccumulator = 0;
@@ -387,26 +724,31 @@
             running = true;
             document.getElementById('tv-container').focus();
 
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            requestAnimationFrame(cpuLoop);
-        }
+	            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+	            requestAnimationFrame(cpuLoop);
+	            if (notify) setStatus('Emulator reset.', 'success');
+	        }
 
         // --- EXIT FUNCTION ---
-        function exitEmulator() {
-            running = false;
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            const ctx = document.getElementById('screen').getContext('2d');
-            ctx.fillStyle = '#111'; 
-            ctx.fillRect(0, 0, 256, 192);
-            document.getElementById('pwr-led').classList.remove('on');
-            try { window.close(); } catch (e) { console.log("Auto-close blocked."); }
-        }
+	        function exitEmulator() {
+	            running = false;
+	            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+	            ctx.fillStyle = '#111'; 
+	            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	            document.getElementById('pwr-led').classList.remove('on');
+	            setStatus('Emulator stopped.', 'info');
+	            try { window.close(); } catch (e) { console.log("Auto-close blocked."); }
+	        }
 
-        // --- TAPE ---
-        function loadTape(buffer) {
-            if (!z80) { alert("Load ROM first!"); return; }
-            const data = new Uint8Array(buffer);
-            for (let i = 0; i < data.length; i++) if ((0x4009 + i) < 0x8000) memory[0x4009 + i] = data[i];
+	        // --- TAPE ---
+	        function loadTape(buffer) {
+	            if (!z80) {
+	                if (!romBuffer) showRomOverlay();
+	                else setStatus('Start the emulator before loading a tape.', 'warn');
+	                return;
+	            }
+	            const data = new Uint8Array(buffer);
+	            for (let i = 0; i < data.length; i++) if ((0x4009 + i) < 0x8000) memory[0x4009 + i] = data[i];
             
             // Tape Fix
             const sp = 0x8000 - 4; 
@@ -421,26 +763,28 @@
             state.d = 0x43; state.e = 0x9B; state.h = 0x43; state.l = 0x99;
             state.ix = 0x0281; state.iy = 0x4000; state.i = 0x1E; state.r = 0xDD;
             state.sp = sp; state.pc = 0x0207; state.im = 1;
-            z80.setState(state);
-            updateKeyboardSystemVars();
+	            z80.setState(state);
+	            updateKeyboardSystemVars();
 
-            console.log("Tape Loaded");
-            document.getElementById('tv-container').focus();
-        }
+	            setStatus('Tape loaded into memory.', 'success');
+	            document.getElementById('tv-container').focus();
+	        }
 
-        // --- SAVE UI ---
-        function openSaveModal() {
-            if (!z80) { alert("Emulator not ready."); return; }
-            const modal = document.getElementById('save-overlay');
-            const input = document.getElementById('filename-input');
-            modal.classList.add('visible');
-            input.value = "program"; input.focus(); input.select(); 
-        }
+	        // --- SAVE UI ---
+	        function openSaveModal() {
+	            const input = document.getElementById('filename-input');
+	            if (!z80) {
+	                setStatus('Start the emulator before saving.', 'warn');
+	                return;
+	            }
+	            saveOverlay.classList.add('visible');
+	            input.value = "program"; input.focus(); input.select(); 
+	        }
 
-        function closeSaveModal() {
-            document.getElementById('save-overlay').classList.remove('visible');
-            document.getElementById('tv-container').focus(); 
-        }
+	        function closeSaveModal() {
+	            saveOverlay.classList.remove('visible');
+	            document.getElementById('tv-container').focus(); 
+	        }
 
         async function performSave() {
             const input = document.getElementById('filename-input');
@@ -448,31 +792,37 @@
             if (!filename) filename = "program";
             if (!filename.toLowerCase().endsWith(".p")) filename += ".p";
 
-            const endAddr = (memory[0x4015] << 8) | memory[0x4014]; 
-            if (endAddr < 0x4009 || endAddr > 0x8000) {
-                alert("Memory invalid. Save cancelled."); closeSaveModal(); return;
-            }
+	            const endAddr = (memory[0x4015] << 8) | memory[0x4014]; 
+	            if (endAddr < 0x4009 || endAddr > 0x8000) {
+	                setStatus('Save cancelled: memory area invalid.', 'error');
+	                closeSaveModal();
+	                return;
+	            }
             const data = memory.slice(0x4009, endAddr);
             const blob = new Blob([data], {type: "application/octet-stream"});
 
             if (window.showSaveFilePicker) {
-                try {
-                    const handle = await window.showSaveFilePicker({
+	                try {
+	                    const handle = await window.showSaveFilePicker({
                         suggestedName: filename,
                         types: [{ description: 'ZX81 Tape File', accept: {'application/octet-stream': ['.p']} }],
                     });
-                    const writable = await handle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                } catch (err) { /* User cancelled */ }
-            } else {
+	                    const writable = await handle.createWritable();
+	                    await writable.write(blob);
+	                    await writable.close();
+	                } catch (err) {
+	                    setStatus('Save cancelled.', 'info');
+	                    return;
+	                }
+	            } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-            closeSaveModal();
-        }
+	                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+	                URL.revokeObjectURL(url);
+	            }
+	            closeSaveModal();
+	            setStatus(`Saved ${filename}.`, 'success');
+	        }
 
         // --- TIMING LOOP ---
         function cpuLoop(timestamp) {
@@ -499,8 +849,8 @@
             animationFrameId = requestAnimationFrame(cpuLoop);
         }
 
-        const ctx = document.getElementById('screen').getContext('2d');
-        const imgData = ctx.createImageData(256, 192);
+        const ctx = screenCanvas.getContext('2d');
+        const imgData = ctx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
         const buf32 = new Uint32Array(imgData.data.buffer);
         const C_BACK = 0xFFE8E8E8; const C_INK  = 0xFF151515;
 
@@ -528,20 +878,23 @@
                 let byte = memory[fontAddr + r];
                 if (invert) byte = ~byte;
                 if (!byte) continue;
-                const offset = ((gy * 8) + r) * 256 + (gx * 8);
+                const offset = ((gy * 8) + r) * SCREEN_WIDTH + (gx * 8);
                 for (let b = 0; b < 8; b++) {
                     if ((byte >> (7 - b)) & 1) buf32[offset + b] = C_INK;
                 }
             }
         }
 
-        // --- INPUTS ---
-        document.getElementById('romLoader').addEventListener('change', e => {
-            const f = e.target.files[0]; if(!f) return;
-            const r = new FileReader();
-            r.onload = e => initEmulator(e.target.result);
-            r.readAsArrayBuffer(f);
-        });
+	        // --- INPUTS ---
+	        screenModeBtn.addEventListener('click', () => { cycleScreenMode(); });
+	        selectRomBtn.addEventListener('click', openRomPicker);
+	        romLoader.addEventListener('change', e => {
+	            const f = e.target.files[0]; if(!f) return;
+	            const r = new FileReader();
+	            r.onload = e => initEmulator(e.target.result, 'ROM loaded from file.');
+	            r.readAsArrayBuffer(f);
+	            e.target.value = '';
+	        });
         document.getElementById('tapeLoader').addEventListener('change', e => {
             const f = e.target.files[0]; if(!f) return;
             const r = new FileReader();
@@ -550,35 +903,57 @@
             e.target.value = '';
         });
 
-        function toggleHelp() {
-            const el = document.getElementById('help-overlay');
-            el.classList.toggle('visible');
-            if (!el.classList.contains('visible')) document.getElementById('tv-container').focus();
-        }
+	        function toggleHelp() {
+	            helpOverlay.classList.toggle('visible');
+	            if (!helpOverlay.classList.contains('visible')) document.getElementById('tv-container').focus();
+	        }
 
-        function toggleAbout() {
-            const el = document.getElementById('about-overlay');
-            el.classList.toggle('visible');
-            if (!el.classList.contains('visible')) document.getElementById('tv-container').focus();
-        }
+	        function toggleAbout() {
+	            aboutOverlay.classList.toggle('visible');
+	            if (!aboutOverlay.classList.contains('visible')) document.getElementById('tv-container').focus();
+	        }
 
         document.getElementById('filename-input').addEventListener('keydown', (e) => {
             e.stopPropagation(); 
             if (e.key === "Enter") performSave();
             if (e.key === "Escape") closeSaveModal();
         });
-        
+
+        fullscreenKeymapBtn.addEventListener('click', toggleHelp);
+
+	        window.addEventListener('resize', () => {
+	            if (screenMode === 'full') applyScreenMode();
+	        });
+
+	        document.addEventListener('fullscreenchange', () => {
+	            if (!document.fullscreenElement && screenMode === 'full') {
+	                screenMode = 'x1';
+	                screenModeIndex = 0;
+	                setStatus('Fullscreen exited. Screen mode: x1.', 'info');
+	            }
+	            applyScreenMode();
+	        });
+
+	        document.addEventListener('keydown', async (e) => {
+	            if (e.key !== 'Escape') return;
+
+	            if (isOverlayVisible(saveOverlay)) { closeSaveModal(); return; }
+	            if (isOverlayVisible(helpOverlay)) { toggleHelp(); return; }
+	            if (isOverlayVisible(aboutOverlay)) { toggleAbout(); return; }
+	            if (screenMode === 'full') { await setScreenMode('x1'); }
+	        });
+
         // --- INPUT HANDLER ---
-        const container = document.getElementById('tv-container');
         container.addEventListener('click', () => container.focus());
         
         container.addEventListener('keydown', (e) => {
-            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || e.key === "F2" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
+            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || e.key === "F2" || e.key === "F3" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
                 e.preventDefault();
             }
 
             if (e.key === "F1") { toggleHelp(); return; }
             if (e.key === "F2") { toggleAbout(); return; }
+            if (e.key === "F3") { cycleScreenMode(); return; }
             
             if (e.key === "Backspace") { 
                 keyState[0xFE] &= ~(1<<0); // Shift
@@ -616,8 +991,18 @@
             updateKeyboardSystemVars();
         });
         
-        document.getElementById('help-overlay').addEventListener('click', toggleHelp);
-        document.getElementById('about-overlay').addEventListener('click', toggleAbout);
+	        helpOverlay.addEventListener('click', (e) => {
+	            if (e.target === e.currentTarget) toggleHelp();
+	        });
+	        aboutOverlay.addEventListener('click', (e) => {
+	            if (e.target === e.currentTarget) toggleAbout();
+	        });
+	        saveOverlay.addEventListener('click', (e) => {
+	            if (e.target === e.currentTarget) closeSaveModal();
+	        });
+
+	        applyScreenMode();
+	        bootEmulator();
 
     </script>
 </body>

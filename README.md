@@ -19,16 +19,16 @@
 ## 🚀 Getting Started
 
 ### 1. The ROM File
-**Why do I need to load the ROM manually?**
-To respect copyright laws and intellectual property rights, **JS81 does not include the Sinclair ZX81 ROM file**. Distributing the ROM without permission is illegal in many jurisdictions. By requiring the user to provide the file, this emulator remains a neutral tool.
+**How does JS81 find the ROM?**
+JS81 looks for `zx81.rom` in the same folder as `js81.html` and attempts to load it automatically on startup. If the browser blocks direct access to local sibling files, JS81 shows a fallback picker so you can select the ROM manually.
 
 1.  You must legally obtain a copy of the **8K ZX81 ROM**.
 2.  Commonly named `zx81.rom` (MD5: `7b9a528005e1979d4692a5d24c084a9e`).
 3.  Place it in the same folder as `js81.html`.
-4.  Click the **LOAD ROM** button in the emulator and select the file.
+4.  Open `js81.html`. If automatic loading is blocked, use the startup fallback picker to select the ROM once.
 
 ### 2. Running the Emulator
-Because the ROM is loaded via a file picker button rather than automatically via script, **JS81 works perfectly offline**. You can simply double-click `js81.html` to run it directly from your hard drive, without needing a local web server (Python/Node/etc).
+JS81 can still be opened directly by double-clicking `js81.html`, without needing a local web server (Python/Node/etc). On startup it will try to auto-load a sibling `zx81.rom`; if that fails, the startup overlay lets you pick the ROM manually.
 
 **If using a web server (Optional):**
 If you prefer to run it via Python (`python3 -m http.server`), you must navigate to `http://localhost:8000/js81.html` (since `index.html` no longer exists).
@@ -39,6 +39,8 @@ If you prefer to run it via Python (`python3 -m http.server`), you must navigate
 | :--- | :--- | :--- |
 | **F1** | **Key Map** | Toggles the keyboard layout helper image. |
 | **F2** | **About** | Displays credits and dedication. |
+| **F3** | **Screen Size** | Rotates between `x1`, `x2`, and fullscreen screen-only mode. |
+| **Escape** | **Close / Exit Fullscreen** | Closes open overlays and returns fullscreen mode to `x1`. |
 | **Arrow Keys** | **Cursor** | Maps to 5, 6, 7, 8 (Works in games and BASIC). |
 | **Backspace** | **Delete** | Triggers `Shift` + `0` (Rubout). |
 | **Shift** | **Shift** | Access red symbols/functions. |
