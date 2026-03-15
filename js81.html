@@ -453,7 +453,7 @@
 	    </div>
 
 	    <div class="footer-hint">
-	        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>) to Delete. <kbd>F1</kbd> key map. <kbd>F2</kbd> about. <kbd>F3</kbd> screen size.
+	        Use <kbd>Shift</kbd>+<kbd>0</kbd> (or <kbd>Backspace</kbd>/<kbd>Delete</kbd>) to Delete. <kbd>F1</kbd> key map. <kbd>F2</kbd> about. <kbd>F3</kbd> screen size.
 	    </div>
 
     <script src="Z80.js"></script>
@@ -710,9 +710,11 @@
                 if (found) break;
             }
 
+            // Shift by itself is a modifier, not a complete key in LAST_K.
+            // Keep LAST_K at "no key" until another key is pressed.
             if (!found && shiftDown) {
-                rowByte = 0xFE;
-                colByte = 0xFE;
+                rowByte = 0xFF;
+                colByte = 0xFF;
             }
 
             // ZX81 system vars used by ROM/BASIC keyboard routines and some machine-code games.
@@ -1109,10 +1111,30 @@
 	        });
 
         // --- INPUT HANDLER ---
+        const activePCKeys = new Map();
+
+        function rebuildKeyState() {
+            keyState[0xFE] = 0x1F; keyState[0xFD] = 0x1F; keyState[0xFB] = 0x1F; keyState[0xF7] = 0x1F;
+            keyState[0xEF] = 0x1F; keyState[0xDF] = 0x1F; keyState[0xBF] = 0x1F; keyState[0x7F] = 0x1F;
+
+            for (const mapped of activePCKeys.values()) {
+                mapped.forEach(({p, b}) => { keyState[p] &= ~(1<<b); });
+            }
+            updateKeyboardSystemVars();
+        }
+
+        function releaseAllKeys() {
+            if (activePCKeys.size === 0) return;
+            activePCKeys.clear();
+            rebuildKeyState();
+        }
+
         container.addEventListener('click', () => container.focus());
+        container.addEventListener('blur', releaseAllKeys);
+        window.addEventListener('blur', releaseAllKeys);
         
         container.addEventListener('keydown', (e) => {
-            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "F1" || e.key === "F2" || e.key === "F3" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
+            if (KEY_MAP[e.code] || e.key === "Backspace" || e.key === "Delete" || e.key === "F1" || e.key === "F2" || e.key === "F3" || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
                 e.preventDefault();
             }
 
@@ -1120,40 +1142,28 @@
             if (e.key === "F2") { toggleAbout(); return; }
             if (e.key === "F3") { cycleScreenMode(); return; }
             
-            if (e.key === "Backspace") { 
-                keyState[0xFE] &= ~(1<<0); // Shift
-                keyState[0xEF] &= ~(1<<0); // 0
-                updateKeyboardSystemVars();
-                return; 
-            }
-            
-            // Map Arrows to 5,6,7,8 (Bit Masks)
-            if (e.code === "ArrowLeft")  { keyState[0xF7] &= ~(1<<4); }
-            else if (e.code === "ArrowDown")  { keyState[0xEF] &= ~(1<<4); }
-            else if (e.code === "ArrowUp")    { keyState[0xEF] &= ~(1<<3); }
-            else if (e.code === "ArrowRight") { keyState[0xEF] &= ~(1<<2); }
-            
-            else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; keyState[p] &= ~(1<<b); }
+            if (activePCKeys.has(e.code)) return;
 
-            updateKeyboardSystemVars();
+            let mapped = [];
+            
+            if (e.key === "Backspace" || e.key === "Delete") { mapped.push({p: 0xFE, b: 0}, {p: 0xEF, b: 0}); } // Shift+0
+            else if (e.code === "ArrowLeft")  { mapped.push({p: 0xF7, b: 4}); } // 5
+            else if (e.code === "ArrowDown")  { mapped.push({p: 0xEF, b: 4}); } // 6
+            else if (e.code === "ArrowUp")    { mapped.push({p: 0xEF, b: 3}); } // 7
+            else if (e.code === "ArrowRight") { mapped.push({p: 0xEF, b: 2}); } // 8
+            else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; mapped.push({p, b}); }
+
+            if (mapped.length > 0) {
+                activePCKeys.set(e.code, mapped);
+                rebuildKeyState();
+            }
         });
         
         container.addEventListener('keyup', (e) => {
-            if (e.key === "Backspace") {
-                keyState[0xFE] |= (1<<0);
-                keyState[0xEF] |= (1<<0);
-                updateKeyboardSystemVars();
-                return;
+            if (activePCKeys.has(e.code)) {
+                activePCKeys.delete(e.code);
+                rebuildKeyState();
             }
-            
-            if (e.code === "ArrowLeft")  { keyState[0xF7] |= (1<<4); }
-            else if (e.code === "ArrowDown")  { keyState[0xEF] |= (1<<4); }
-            else if (e.code === "ArrowUp")    { keyState[0xEF] |= (1<<3); }
-            else if (e.code === "ArrowRight") { keyState[0xEF] |= (1<<2); }
-            
-            else if (KEY_MAP[e.code]) { const [p, b] = KEY_MAP[e.code]; keyState[p] |= (1<<b); }
-
-            updateKeyboardSystemVars();
         });
         
 	        helpOverlay.addEventListener('click', (e) => {
